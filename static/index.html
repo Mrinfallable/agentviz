@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>agentviz</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to the agents</a>
+
+<div class="app" id="app">
+  <header class="topbar" id="topbar">
+    <div class="topbar__brand">
+      <svg class="brand-mark" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
+        <circle cx="5" cy="5" r="2.5"></circle><circle cx="15" cy="10" r="2.5"></circle><circle cx="5" cy="15" r="2.5"></circle>
+        <path d="M7.5 5 H10 L12.5 10 M7.5 15 H10 L12.5 10" fill="none" stroke-width="1.5"></path>
+      </svg>
+      <span class="brand-name">agentviz</span>
+    </div>
+
+    <label class="session-picker">
+      <span class="visually-hidden">Session</span>
+      <select id="session-select" aria-label="Session"></select>
+    </label>
+
+    <div class="live" id="live" data-status="connecting">
+      <span class="live__dot" aria-hidden="true"></span>
+      <span class="live__text" id="live-text">Connecting…</span>
+    </div>
+
+    <div class="topbar__spacer"></div>
+
+    <span class="totals__caption" aria-hidden="true">All shown</span>
+    <ul class="totals" id="totals" aria-label="All agents shown, across every run" title="All agents shown, across every run in view">
+      <li class="total" data-key="running"><span class="total__glyph"></span><span class="total__n">–</span><span class="total__label">running</span></li>
+      <li class="total" data-key="done"><span class="total__glyph"></span><span class="total__n">–</span><span class="total__label">done</span></li>
+      <li class="total" data-key="failed"><span class="total__glyph"></span><span class="total__n">–</span><span class="total__label">failed</span></li>
+      <li class="total" data-key="ended"><span class="total__glyph"></span><span class="total__n">–</span><span class="total__label">ended</span></li>
+      <li class="total" data-key="other" hidden><span class="total__glyph"></span><span class="total__n">–</span><span class="total__label">stopped</span></li>
+    </ul>
+
+    <div class="tokens" id="tokens">
+      <span class="tokens__item" id="tokens-total"><span class="tokens__n">–</span> <span class="tokens__unit">out</span></span>
+      <span class="tokens__item tokens__item--burn" id="tokens-burn"><span class="tokens__n">–</span> <span class="tokens__unit">out/min</span></span>
+    </div>
+
+    <button type="button" class="switch" id="toggle-older" aria-pressed="false" aria-keyshortcuts="a">
+      <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+      <span class="switch__label switch__label--long">Show older</span><span class="switch__label switch__label--short">Older</span><span class="switch__n" id="older-n" hidden></span>
+    </button>
+  </header>
+
+  <nav class="rail" id="rail" aria-label="Workflow runs">
+    <div class="rail__head">
+      <h2 class="rail__title">Runs</h2>
+      <span class="rail__count" id="rail-count"></span>
+    </div>
+    <div class="rail__list" id="rail-list"></div>
+    <p class="rail__note" id="rail-note" hidden></p>
+  </nav>
+
+  <main class="main" id="main" tabindex="-1">
+    <div class="banner" id="banner" role="alert" hidden></div>
+    <section class="runhead" id="runhead" aria-labelledby="runhead-title">
+      <div class="runhead__row">
+        <h1 class="runhead__title" id="runhead-title">Loading…</h1>
+        <span class="runhead__chip" id="runhead-chip"></span>
+        <span class="runhead__phase" id="runhead-phase"></span>
+        <span class="runhead__counts" id="runhead-counts"></span>
+      </div>
+      <p class="runhead__desc" id="runhead-desc"></p>
+      <p class="runhead__error" id="runhead-error" hidden></p>
+      <dl class="runhead__stats" id="runhead-stats"></dl>
+    </section>
+
+    <div class="toolbar">
+      <div class="segmented" role="tablist" aria-label="View" id="view-tabs">
+        <button type="button" role="tab" class="segmented__btn" id="tab-flow" data-view="flow" aria-controls="view-flow" aria-selected="true" aria-keyshortcuts="1">
+          <span>Flow</span><kbd>1</kbd>
+        </button>
+        <button type="button" role="tab" class="segmented__btn" id="tab-timeline" data-view="timeline" aria-controls="view-timeline" aria-selected="false" aria-keyshortcuts="2" tabindex="-1">
+          <span>Timeline</span><kbd>2</kbd>
+        </button>
+      </div>
+      <div class="filter">
+        <svg class="filter__icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><circle cx="7" cy="7" r="4.5" fill="none" stroke-width="1.5"></circle><path d="M10.5 10.5 L14 14" stroke-width="1.5"></path></svg>
+        <input type="search" id="filter" class="filter__input" placeholder="Filter agents" aria-label="Filter agents by label" autocomplete="off" spellcheck="false" aria-keyshortcuts="/">
+        <kbd class="filter__kbd" aria-hidden="true">/</kbd>
+        <button type="button" class="filter__clear" id="filter-clear" aria-label="Clear the filter" title="Clear the filter (Esc)" hidden>
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M4.5 4.5 L11.5 11.5 M11.5 4.5 L4.5 11.5" stroke-width="1.5"></path></svg>
+        </button>
+      </div>
+      <span class="toolbar__count" id="toolbar-count" aria-live="polite"></span>
+      <button type="button" class="help-btn" id="help-btn" aria-haspopup="dialog" aria-controls="help" aria-expanded="false" aria-keyshortcuts="?" title="Keyboard shortcuts (?)"><kbd>?</kbd><span class="help-btn__label">Shortcuts</span></button>
+    </div>
+
+    <div class="view view--flow" id="view-flow" role="tabpanel" aria-labelledby="tab-flow"></div>
+    <div class="view view--timeline" id="view-timeline" role="tabpanel" aria-labelledby="tab-timeline" hidden></div>
+  </main>
+
+  <aside class="drawer" id="drawer" aria-labelledby="drawer-title" hidden>
+    <header class="drawer__head">
+      <div class="drawer__titlerow">
+        <span class="drawer__glyph" id="drawer-glyph"></span>
+        <h2 class="drawer__title" id="drawer-title" tabindex="-1"></h2>
+        <span id="drawer-chip"></span>
+        <button type="button" class="icon-btn drawer__close" id="drawer-close" aria-label="Close agent details" aria-keyshortcuts="Escape">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 4 L12 12 M12 4 L4 12" stroke-width="1.5"></path></svg>
+        </button>
+      </div>
+      <p class="drawer__sub" id="drawer-sub"></p>
+      <dl class="drawer__stats" id="drawer-stats"></dl>
+      <p class="drawer__alert" id="drawer-alert" hidden></p>
+    </header>
+    <div class="tabs" role="tablist" aria-label="Agent details" id="drawer-tabs">
+      <button type="button" role="tab" class="tabs__tab" id="dtab-activity" data-tab="activity" aria-controls="dpanel-activity" aria-selected="true">Activity</button>
+      <button type="button" role="tab" class="tabs__tab" id="dtab-prompt" data-tab="prompt" aria-controls="dpanel-prompt" aria-selected="false" tabindex="-1">Prompt</button>
+      <button type="button" role="tab" class="tabs__tab" id="dtab-result" data-tab="result" aria-controls="dpanel-result" aria-selected="false" tabindex="-1">Result</button>
+      <button type="button" role="tab" class="tabs__tab" id="dtab-files" data-tab="files" aria-controls="dpanel-files" aria-selected="false" tabindex="-1">Files <span class="tabs__n" id="dtab-files-n"></span></button>
+      <button type="button" role="tab" class="tabs__tab" id="dtab-tools" data-tab="tools" aria-controls="dpanel-tools" aria-selected="false" tabindex="-1">Tools <span class="tabs__n" id="dtab-tools-n"></span></button>
+    </div>
+    <div class="drawer__body">
+      <div class="panel panel--activity" id="dpanel-activity" role="tabpanel" aria-labelledby="dtab-activity" tabindex="0">
+        <div class="feed" id="feed">
+          <button type="button" class="feed__earlier" id="feed-earlier" hidden>Load earlier</button>
+          <ol class="feed__list" id="feed-list" aria-label="Agent activity, oldest first"></ol>
+          <p class="feed__status" id="feed-status"></p>
+        </div>
+        <button type="button" class="feed__jump" id="feed-jump" hidden>Jump to latest</button>
+      </div>
+      <div class="panel" id="dpanel-prompt" role="tabpanel" aria-labelledby="dtab-prompt" tabindex="0" hidden></div>
+      <div class="panel" id="dpanel-result" role="tabpanel" aria-labelledby="dtab-result" tabindex="0" hidden></div>
+      <div class="panel" id="dpanel-files" role="tabpanel" aria-labelledby="dtab-files" tabindex="0" hidden></div>
+      <div class="panel" id="dpanel-tools" role="tabpanel" aria-labelledby="dtab-tools" tabindex="0" hidden></div>
+    </div>
+  </aside>
+</div>
+
+<div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+<div class="help" id="help" role="dialog" aria-labelledby="help-title" hidden>
+  <div class="help__head"><h2 class="help__title" id="help-title">Keyboard shortcuts</h2><button type="button" class="icon-btn" id="help-close" aria-label="Close the shortcuts"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 4 L12 12 M12 4 L4 12" stroke-width="1.5"></path></svg></button></div>
+  <dl class="help__list">
+    <div><dt><kbd>j</kbd> <kbd>k</kbd> or <kbd>↓</kbd> <kbd>↑</kbd></dt><dd>the next or previous agent (an open drawer follows)</dd></div>
+    <div><dt><kbd>Enter</kbd></dt><dd>open the selected agent</dd></div>
+    <div><dt><kbd>o</kbd></dt><dd>move focus into the open drawer</dd></div>
+    <div><dt><kbd>PgUp</kbd> <kbd>PgDn</kbd> <kbd>Space</kbd></dt><dd>scroll the drawer's activity</dd></div>
+    <div><dt><kbd>Home</kbd> <kbd>End</kbd></dt><dd>the oldest activity, or the newest (and follow it)</dd></div>
+    <div><dt><kbd>Esc</kbd></dt><dd>close the drawer, or clear the filter</dd></div>
+    <div><dt><kbd>1</kbd> <kbd>2</kbd></dt><dd>the Flow view or the Timeline view</dd></div>
+    <div><dt><kbd>a</kbd></dt><dd>show or hide older runs and agents</dd></div>
+    <div><dt><kbd>/</kbd></dt><dd>filter the agents by label</dd></div>
+    <div><dt><kbd>?</kbd></dt><dd>this list</dd></div>
+  </dl>
+</div>
+<div class="visually-hidden" id="announcer" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
